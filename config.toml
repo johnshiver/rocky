@@ -1,0 +1,17 @@
+[backend_test1]
+host_port = "localhost:5432"
+username = "postgres"
+password = "postgres"
+database = "postgres"
+proxy_port = 1234
+
+[backend_test2]
+host_port = "localhost:5433"
+username = "postgres"
+password = "postgres"
+database = "postgres"
+proxy_port = 1235
+
+[rocky_proxy_settings]
+host_port = "localhost:9090"
+connection_max = 5000
