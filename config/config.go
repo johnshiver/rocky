@@ -1,12 +1,13 @@
-package main
+package config
 
 import (
 	"strings"
 
+	"github.com/johnshiver/rocky/logger"
 	"github.com/spf13/viper"
 )
 
-var c PGBorgSettings
+var c RockyProxySettings
 
 const DEFAULT_CAPACITY = 5
 
@@ -34,7 +35,7 @@ type RockyProxySettings struct {
 
 func init() {
 
-	pLogger := GetLogInstance()
+	pLogger := logger.GetLogInstance()
 
 	// TODO: create some config validation, checking for things like ports defined multiple times
 	// TODO: eventually set config to database and only draw from toml if nothing is in the db or some override
@@ -62,8 +63,8 @@ func init() {
 			database := viper.GetString(setting + ".database")
 			proxyPort := viper.GetInt(setting + ".proxy_port")
 			c.BackendHosts = append(c.BackendHosts, &BackendHostSetting{
-				HostName:  strings.TrimLeft(setting, "backend_"),
-				HostPort:  backendHostPort,
+				Name:      strings.TrimLeft(setting, "backend_"),
+				Port:      backendHostPort,
 				Username:  username,
 				Password:  password,
 				Database:  database,
@@ -85,7 +86,7 @@ func GetBackendHosts() []*BackendHostSetting {
 
 func GetBackendHost(hostName string) *BackendHostSetting {
 	for _, backend := range c.BackendHosts {
-		if backend.HostName == hostName {
+		if backend.Name == hostName {
 			return backend
 		}
 	}

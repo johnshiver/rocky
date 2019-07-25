@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/johnshiver/rocky/tcp_connection"
+	"github.com/johnshiver/rocky/netcon"
 	_ "github.com/lib/pq"
 	"github.com/ory/dockertest"
 )
@@ -28,9 +28,7 @@ func TestMain(m *testing.M) {
 		args: []string{
 			"POSTGRES_USER=test",
 			"POSTGRES_PASSWORD=test",
-			"POSTGRES_DB=test",
-		},
-	}
+			"POSTGRES_DB=test"}}
 
 	// uses default docker, might need some sort of configuration in the future
 	pool, err := dockertest.NewPool("")
@@ -71,18 +69,23 @@ func TestMain(m *testing.M) {
 }
 
 func TestStartupMessage(t *testing.T) {
-	conn, err := tcp_connection.ConnectTCP(resource.GetHostPort("5432/tcp"))
+	conn, err := netcon.ConnectTCP(resource.GetHostPort("5432/tcp"))
 	if err != nil {
 		t.Error(err)
 	}
-	startUpMessage := CreateStartupMessage("test", "test")
-	l, err := tcp_connection.SendTCP(conn, startUpMessage)
+	options := make(map[string]string)
+	startUpMessage := CreateStartupMessage("test", "test", options)
+	_, err = netcon.SendTCP(conn, startUpMessage)
 	if err != nil {
 		t.Error(err)
 	}
-	recvd, l, err := tcp_connection.ReceiveTCP(conn, 4096)
+	recvd, _, err := netcon.ReceiveTCP(conn, 4096)
 
 	if err != nil {
 		t.Error(err)
+	}
+	_, authType := parseStartUpResponse(recvd)
+	if authType != AuthenticationMD5 {
+		t.Errorf("authType is not MD5, is %v", authType)
 	}
 }

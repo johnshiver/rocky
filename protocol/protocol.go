@@ -33,12 +33,15 @@ import (
 	"encoding/binary"
 
 	"github.com/johnshiver/rocky/logger"
-	"github.com/johnshiver/rocky/messageBuffer"
+	"github.com/johnshiver/rocky/msgbuf"
 )
 
 const (
-	ProtocolVersion int32 = 196608
-	SSLRequestCode  int32 = 80877103
+	// message length offsets
+	PGMessageLengthOffsetStartup int   = 0
+	PGMessageLengthOffset        int   = 1
+	ProtocolVersion              int32 = 196608
+	SSLRequestCode               int32 = 80877103
 
 	SSLAllowed    byte = 'S'
 	SSLNotAllowed byte = 'N'
@@ -130,7 +133,7 @@ func GetTerminateMessage() []byte {
 }
 
 func CreatePasswordMessage(password string) []byte {
-	message := messageBuffer.NewMessageBuffer([]byte{})
+	message := msgbuf.New([]byte{})
 
 	// Set the message type
 	message.WriteByte(PasswordMessageType)
@@ -150,7 +153,7 @@ func CreatePasswordMessage(password string) []byte {
 // CreateStartupMessage creates a PG startup message. This message is used to
 // startup all connections with a PG backend.
 func CreateStartupMessage(username string, database string, options map[string]string) []byte {
-	message := messageBuffer.NewMessageBuffer([]byte{})
+	message := msgbuf.New([]byte{})
 	// Temporarily set the message length to 0.
 	message.WriteInt32(0)
 	message.WriteInt32(ProtocolVersion)

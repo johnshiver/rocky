@@ -1,4 +1,4 @@
-package main
+package protocol
 
 import (
 	"bytes"
@@ -7,15 +7,12 @@ import (
 	"fmt"
 	"io"
 	"net"
+
+	"github.com/johnshiver/rocky/config"
+	"github.com/johnshiver/rocky/netcon"
 )
 
-var pLogger *PGLogger
-
-func init() {
-	pLogger = GetLogInstance()
-}
-
-func HandleAuthenticationRequest(backend_config *BackendHostSetting, connection net.Conn, message []byte) bool {
+func parseStartUpResponse(message []byte) (int32, int32) {
 	var msgLength int32
 	var authType int32
 
@@ -24,6 +21,11 @@ func HandleAuthenticationRequest(backend_config *BackendHostSetting, connection 
 
 	reader.Reset(message[5:9])
 	binary.Read(reader, binary.BigEndian, &authType)
+	return msgLength, authType
+
+}
+
+func HandleAuthenticationRequest(backend_config *config.BackendHostSetting, connection net.Conn, authType int32, message []byte) bool {
 
 	switch authType {
 	case AuthenticationKerberosV5:
@@ -33,7 +35,7 @@ func HandleAuthenticationRequest(backend_config *BackendHostSetting, connection 
 		return handleAuthClearText(connection, backend_config.Password)
 	case AuthenticationMD5:
 		pLogger.Println("Authenticating with MD5 password.")
-		return handleAuthMD5(connection, message, backend_config.Username, backend_config.Password)
+		return handleAuthMD5(connection, backend_config.Username, backend_config.Password)
 	case AuthenticationSCM:
 		pLogger.Println("SCM authentication is not currently supported.")
 	case AuthenticationGSS:
@@ -59,20 +61,21 @@ func createMD5Password(username string, password string, salt string) string {
 	return fmt.Sprintf("md5%x", md5.Sum([]byte(passwordString)))
 }
 
-func handleAuthMD5(connection net.Conn, message []byte, username, password string) bool {
-	salt := string(message[9:13])
+func handleAuthMD5(connection net.Conn, username, password string) bool {
+	//  create a better salt
+	salt := "THIS_IS_MY_SALT"
 	password = createMD5Password(username, password, salt)
 
 	passwordMessage := CreatePasswordMessage(password)
 
-	_, err := Send(connection, passwordMessage)
+	_, err := netcon.SendTCP(connection, passwordMessage)
 
 	if err != nil {
 		pLogger.Println("Error sending password message to the backend.")
 		pLogger.Printf("Error: %s\n", err.Error())
 	}
 
-	message, _, err = Receive(connection)
+	message, _, err := netcon.ReceiveTCP(connection, 4096)
 
 	if err != nil {
 		pLogger.Println("Error receiving authentication response from the backend.")
@@ -110,7 +113,7 @@ func handleAuthClearText(connection net.Conn, password string) bool {
 func AuthenticateClient(client net.Conn, backend_host_port string, message []byte, length int) (bool, error) {
 	var err error
 
-	backend, err := Connect(backend_host_port)
+	backend, err := netcon.ConnectTCP(backend_host_port)
 
 	if err != nil {
 		pLogger.Printf("Error connecting to %s\n", backend_host_port)
@@ -124,7 +127,7 @@ func AuthenticateClient(client net.Conn, backend_host_port string, message []byt
 	_, err = backend.Write(message[:length])
 
 	pLogger.Printf("client auth: receiving startup response from %s\n", backend_host_port)
-	message, length, err = Receive(backend)
+	message, length, err = netcon.ReceiveTCP(backend, 4096)
 
 	if err != nil {
 		pLogger.Println("An error occurred receiving startup response.")
@@ -133,14 +136,14 @@ func AuthenticateClient(client net.Conn, backend_host_port string, message []byt
 	}
 
 	/*
-	 * While the response from the backend is not an AuthenticationOK or
-	 * ErrorResponse keep relaying the mesages to/from the client/backend
-	 */
+	 While the response from the backend is not an AuthenticationOK or
+	 ErrorResponse keep relaying the mesages to/from the client/backend
+	*/
 	messageType := GetMessageType(message)
 
 	for !IsAuthenticationOk(message) && (messageType != ErrorMessageType) {
-		Send(client, message[:length])
-		message, length, err = Receive(client)
+		netcon.SendTCP(client, message[:length])
+		message, length, err = netcon.ReceiveTCP(client, 4096)
 
 		/*
 		  Must check that the client has not closed the connection.  This in
@@ -159,23 +162,23 @@ func AuthenticateClient(client net.Conn, backend_host_port string, message []byt
 			return false, err
 		}
 
-		Send(backend, message[:length])
+		netcon.SendTCP(backend, message[:length])
 
-		message, length, err = Receive(backend)
+		message, length, err = netcon.ReceiveTCP(backend, 4096)
 		messageType = GetMessageType(message)
 	}
 
 	/*
-	 * If the last response from the backend was AuthenticationOK, then
-	 * terminate the connection and return 'true' for a successful
-	 * authentication of the client.
-	 */
+	 If the last response from the backend was AuthenticationOK, then
+	 terminate the connection and return 'true' for a successful
+	 authentication of the client.
+	*/
 	pLogger.Println("client auth: checking authentication repsonse")
 	if IsAuthenticationOk(message) {
 		pLogger.Println("client auth: all good!")
 		termMsg := GetTerminateMessage()
-		Send(backend, termMsg)
-		Send(client, message[:length])
+		netcon.SendTCP(backend, termMsg)
+		netcon.SendTCP(client, message[:length])
 		return true, nil
 	}
 
@@ -183,7 +186,7 @@ func AuthenticateClient(client net.Conn, backend_host_port string, message []byt
 		pLogger.Println("Error occurred on client startup.")
 	}
 
-	Send(client, message[:length])
+	netcon.SendTCP(client, message[:length])
 
 	return false, err
 }

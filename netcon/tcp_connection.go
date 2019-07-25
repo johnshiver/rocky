@@ -1,4 +1,4 @@
-package tcp_connection
+package netcon
 
 import (
 	"net"

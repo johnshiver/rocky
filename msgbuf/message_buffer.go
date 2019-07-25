@@ -1,4 +1,4 @@
-package messageBuffer
+package msgbuf
 
 import (
 	"bytes"
@@ -20,7 +20,9 @@ type MessageBuffer struct {
 	buffer *bytes.Buffer
 }
 
-func NewMessageBuffer(message []byte) *MessageBuffer {
+// NewMwessageBuffer
+//
+func New(message []byte) *MessageBuffer {
 	return &MessageBuffer{
 		buffer: bytes.NewBuffer(message),
 	}
