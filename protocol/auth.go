@@ -1,9 +1,7 @@
 package protocol
 
 import (
-	"bytes"
 	"crypto/md5"
-	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
@@ -12,30 +10,17 @@ import (
 	"github.com/johnshiver/rocky/netcon"
 )
 
-func parseStartUpResponse(message []byte) (int32, int32) {
-	var msgLength int32
-	var authType int32
-
-	reader := bytes.NewReader(message[1:5])
-	binary.Read(reader, binary.BigEndian, &msgLength)
-
-	reader.Reset(message[5:9])
-	binary.Read(reader, binary.BigEndian, &authType)
-	return msgLength, authType
-
-}
-
-func HandleAuthenticationRequest(backend_config *config.BackendHostSetting, connection net.Conn, authType int32, message []byte) bool {
+func handleAuthentication(backendConfig *config.BackendHostSetting, connection net.Conn, authType int32) bool {
 
 	switch authType {
 	case AuthenticationKerberosV5:
 		pLogger.Println("KerberosV5 authentication is not currently supported.")
 	case AuthenticationClearText:
 		pLogger.Println("Authenticating with clear text password.")
-		return handleAuthClearText(connection, backend_config.Password)
+		return handleAuthClearText(connection, backendConfig.Password)
 	case AuthenticationMD5:
 		pLogger.Println("Authenticating with MD5 password.")
-		return handleAuthMD5(connection, backend_config.Username, backend_config.Password)
+		return handleAuthMD5(connection, backendConfig.Username, backendConfig.Password)
 	case AuthenticationSCM:
 		pLogger.Println("SCM authentication is not currently supported.")
 	case AuthenticationGSS:

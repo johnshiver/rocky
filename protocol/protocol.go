@@ -1,9 +1,9 @@
 // Nearly all of this came from or was modified from crunchy-proxy  Thanks guys!
 
-// Reference: https://www.postgresql.org/docs/9.6/static/protocol-message-formats.html
-//            https://www.postgresql.org/docs/9.3/static/protocol-overview.html#PROTOCOL-MESSAGE-CONCEPTS
-
 /*   From the docs ------------------------------------------------------------------------------
+
+Reference: https://www.postgresql.org/docs/9.6/static/protocol-message-formats.html
+           https://www.postgresql.org/docs/9.3/static/protocol-overview.html#PROTOCOL-MESSAGE-CONCEPTS
 
 All communication is through a stream of messages. The first byte of a message identifies the
 message type, and the next four bytes specify the length of the rest of the message
@@ -183,4 +183,17 @@ func CreateStartupMessage(username string, database string, options map[string]s
 	message.ResetLength(PGMessageLengthOffsetStartup)
 
 	return message.Bytes()
+}
+
+func parseStartUpResponse(message []byte) (int32, int32) {
+	var msgLength int32
+	var authType int32
+
+	reader := bytes.NewReader(message[1:5])
+	binary.Read(reader, binary.BigEndian, &msgLength)
+
+	reader.Reset(message[5:9])
+	binary.Read(reader, binary.BigEndian, &authType)
+	return msgLength, authType
+
 }
