@@ -80,11 +80,14 @@ func TestStartupMessage(t *testing.T) {
 		t.Error(err)
 	}
 	recvd, _, err := netcon.ReceiveTCP(conn, 4096)
-
 	if err != nil {
 		t.Error(err)
 	}
-	_, authType := parseStartUpResponse(recvd)
+
+	_, authType, err := parseStartUpResponse(recvd)
+	if err != nil {
+		t.Error(err)
+	}
 	if authType != AuthenticationMD5 {
 		t.Errorf("authType is not MD5, is %v", authType)
 	}

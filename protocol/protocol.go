@@ -31,6 +31,7 @@ package protocol
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 
 	"github.com/johnshiver/rocky/logger"
 	"github.com/johnshiver/rocky/msgbuf"
@@ -185,15 +186,18 @@ func CreateStartupMessage(username string, database string, options map[string]s
 	return message.Bytes()
 }
 
-func parseStartUpResponse(message []byte) (int32, int32) {
+func parseStartUpResponse(message []byte) (int32, int32, error) {
 	var msgLength int32
 	var authType int32
+	if GetMessageType(message) != AuthenticationMessageType {
+		return msgLength, authType, errors.New("StartUp Response was not AuthMessageType")
+	}
 
 	reader := bytes.NewReader(message[1:5])
 	binary.Read(reader, binary.BigEndian, &msgLength)
 
 	reader.Reset(message[5:9])
 	binary.Read(reader, binary.BigEndian, &authType)
-	return msgLength, authType
+	return msgLength, authType, nil
 
 }
