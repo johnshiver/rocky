@@ -1,4 +1,4 @@
-package tcp_connection
+package protocol
 
 import (
 	"database/sql"
@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/johnshiver/rocky/tcp_connection"
 	_ "github.com/lib/pq"
 	"github.com/ory/dockertest"
 )
@@ -41,6 +42,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("Could not start resource: %s", err)
 	}
+	resource.Expire(60)
 
 	// check that container is able to open a database connection using the stdlib driver
 	if err := pool.Retry(func() error {
@@ -68,8 +70,18 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestConnectTCPSuccess(t *testing.T) {
-	_, err := ConnectTCP(resource.GetHostPort("5432/tcp"))
+func TestStartupMessage(t *testing.T) {
+	conn, err := tcp_connection.ConnectTCP(resource.GetHostPort("5432/tcp"))
+	if err != nil {
+		t.Error(err)
+	}
+	startUpMessage := CreateStartupMessage("test", "test")
+	l, err := tcp_connection.SendTCP(conn, startUpMessage)
+	if err != nil {
+		t.Error(err)
+	}
+	recvd, l, err := tcp_connection.ReceiveTCP(conn, 4096)
+
 	if err != nil {
 		t.Error(err)
 	}

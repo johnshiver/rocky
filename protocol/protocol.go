@@ -26,11 +26,14 @@ message-boundary synchronization.
 
 */
 
-package main
+package protocol
 
 import (
 	"bytes"
 	"encoding/binary"
+
+	"github.com/johnshiver/rocky/logger"
+	"github.com/johnshiver/rocky/messageBuffer"
 )
 
 const (
@@ -64,6 +67,12 @@ const (
 	AuthenticationSSPI        int32 = 9
 )
 
+var pLogger *logger.PGLogger
+
+func init() {
+	pLogger = logger.GetLogInstance()
+}
+
 // Gets version from start up message from client
 func GetVersion(message []byte) int32 {
 	var code int32
@@ -71,7 +80,7 @@ func GetVersion(message []byte) int32 {
 	reader := bytes.NewReader(message[4:8])
 	binary.Read(reader, binary.BigEndian, &code)
 
-	pgLogger.Printf("Version from start up message: %d\n", code)
+	pLogger.Printf("Version from start up message: %d\n", code)
 
 	return code
 }
@@ -121,7 +130,7 @@ func GetTerminateMessage() []byte {
 }
 
 func CreatePasswordMessage(password string) []byte {
-	message := NewMessageBuffer([]byte{})
+	message := messageBuffer.NewMessageBuffer([]byte{})
 
 	// Set the message type
 	message.WriteByte(PasswordMessageType)
@@ -141,7 +150,7 @@ func CreatePasswordMessage(password string) []byte {
 // CreateStartupMessage creates a PG startup message. This message is used to
 // startup all connections with a PG backend.
 func CreateStartupMessage(username string, database string, options map[string]string) []byte {
-	message := NewMessageBuffer([]byte{})
+	message := messageBuffer.NewMessageBuffer([]byte{})
 	// Temporarily set the message length to 0.
 	message.WriteInt32(0)
 	message.WriteInt32(ProtocolVersion)
@@ -168,7 +177,6 @@ func CreateStartupMessage(username string, database string, options map[string]s
 
 	// The message should end with a NULL byte
 	message.WriteByte(0x00)
-
 	message.ResetLength(PGMessageLengthOffsetStartup)
 
 	return message.Bytes()

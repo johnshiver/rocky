@@ -15,7 +15,7 @@ func init() {
 // Send
 //
 // Sends bytes to TCP connection
-func Send(connection net.Conn, message []byte) (int, error) {
+func SendTCP(connection net.Conn, message []byte) (int, error) {
 	return connection.Write(message)
 }
 
