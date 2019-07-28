@@ -74,7 +74,7 @@ func TestStartupMessage(t *testing.T) {
 		t.Error(err)
 	}
 	options := make(map[string]string)
-	startUpMessage := CreateStartupMessage("test", "test", options)
+	startUpMessage := NewStartupMessage("test", "test", options)
 	_, err = netcon.SendTCP(conn, startUpMessage)
 	if err != nil {
 		t.Error(err)

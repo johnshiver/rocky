@@ -1,4 +1,5 @@
 // Nearly all of this came from or was modified from crunchy-proxy  Thanks guys!
+// https://github.com/CrunchyData/crunchy-proxy
 
 /*   From the docs ------------------------------------------------------------------------------
 
@@ -119,10 +120,11 @@ func IsAuthenticationOk(message []byte) bool {
 	reader := bytes.NewReader(message[5:9])
 	binary.Read(reader, binary.BigEndian, &messageValue)
 
+	// TODO: set messagelength for auth as constant somewhere
 	return (messageLength == 8 && messageValue == AuthenticationOk)
 }
 
-func GetTerminateMessage() []byte {
+func NewTerminateMessage() []byte {
 	var buffer []byte
 	buffer = append(buffer, 'X')
 
@@ -133,7 +135,7 @@ func GetTerminateMessage() []byte {
 	return buffer
 }
 
-func CreatePasswordMessage(password string) []byte {
+func NewPasswordMessage(password string) []byte {
 	message := msgbuf.New([]byte{})
 
 	// Set the message type
@@ -153,7 +155,7 @@ func CreatePasswordMessage(password string) []byte {
 
 // CreateStartupMessage creates a PG startup message. This message is used to
 // startup all connections with a PG backend.
-func CreateStartupMessage(username string, database string, options map[string]string) []byte {
+func NewStartupMessage(username string, database string, options map[string]string) []byte {
 	message := msgbuf.New([]byte{})
 	// Temporarily set the message length to 0.
 	message.WriteInt32(0)

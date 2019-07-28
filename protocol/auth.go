@@ -51,7 +51,7 @@ func handleAuthMD5(connection net.Conn, username, password string) bool {
 	salt := "THIS_IS_MY_SALT"
 	password = createMD5Password(username, password, salt)
 
-	passwordMessage := CreatePasswordMessage(password)
+	passwordMessage := NewPasswordMessage(password)
 
 	_, err := netcon.SendTCP(connection, passwordMessage)
 
@@ -71,7 +71,7 @@ func handleAuthMD5(connection net.Conn, username, password string) bool {
 }
 
 func handleAuthClearText(connection net.Conn, password string) bool {
-	passwordMessage := CreatePasswordMessage(password)
+	passwordMessage := NewPasswordMessage(password)
 
 	_, err := connection.Write(passwordMessage)
 
@@ -161,7 +161,7 @@ func AuthenticateClient(client net.Conn, backend_host_port string, message []byt
 	pLogger.Println("client auth: checking authentication repsonse")
 	if IsAuthenticationOk(message) {
 		pLogger.Println("client auth: all good!")
-		termMsg := GetTerminateMessage()
+		termMsg := NewTerminateMessage()
 		netcon.SendTCP(backend, termMsg)
 		netcon.SendTCP(client, message[:length])
 		return true, nil
